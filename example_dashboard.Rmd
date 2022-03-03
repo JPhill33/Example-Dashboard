@@ -7,7 +7,7 @@ output:
     theme: paper
     navbar:
       - { title: "CoinGecko", href: "https://www.coingecko.com/", align: right, icon: glyphicon-home}
-      - { title: "Josh Phillips Github", href: "https://github.com/JPhill33", align: right}
+      - { title: "Github", href: "https://github.com/JPhill33", align: right}
 ---
 
 ```{r setup, include=FALSE}
