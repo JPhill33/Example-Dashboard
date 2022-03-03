@@ -1,0 +1,229 @@
+---
+title: "Trending Cryptocurrency Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    theme: paper
+    navbar:
+      - { title: "CoinGecko", href: "https://www.coingecko.com/", align: right, icon: glyphicon-home}
+      - { title: "Josh Phillips Github", href: "https://github.com/JPhill33", align: right}
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(zoo)
+library(httr)
+library(binancer)
+library(lubridate)
+library(data.table)
+library(dplyr)
+library(rvest)
+library(tidyr)
+library(scales)
+library(roll)
+library(PerformanceAnalytics)
+library(ggplot2)
+library(arsenal)
+library(jsonlite)
+library(geckor)
+library(scales)
+library(DataCombine)
+library(fmsb)
+library(plotrix)
+library(plotly)
+library(thematic)
+library(shinyLP)
+```
+
+Column {data-width=275}
+-----------------------------------------------------------------------
+
+### Trending Coins
+
+```{r}
+trending_url <- paste0('https://api.coingecko.com/api/v3/search/trending')
+trending_json <- jsonlite::fromJSON(trending_url)
+trending_df <- data.frame(trending_json$coins)
+
+trending_id <- trending_df$item$id 
+trending_symbol <- trending_df$item$symbol
+trending_mkt_cap <- trending_df$item$market_cap_rank
+price_in_btc <- trending_df$item$price_btc 
+price_in_btc <- round(price_in_btc, digits = 6)
+hypothetical_weighting <- 100 / 5
+
+
+trending_df <- data.frame('Trending Coin' = trending_id,
+                          'Market Cap Rank' = trending_mkt_cap,
+                          'Price in Bitcoin' = price_in_btc)
+trending_df[1:5,]
+```
+
+
+### Asset Performance
+
+```{r}
+pricing_url <- jsonlite::fromJSON('https://api.covalenthq.com/v1/pricing/historical/USD/btc/?quote-currency=USD&format=JSON&from=2015-01-01&to=2020-01-01&key=ckey_b4641130045946148e050fd4d29')
+
+prices_df <- pricing_url$data$prices$price
+prices_date_df <- pricing_url$data$prices$date 
+
+
+df <- data.frame(prices_df) 
+rownames(df) <- prices_date_df
+
+asset_daily_returns <- PerformanceAnalytics::CalculateReturns(df)
+
+asset_port_monthly_returns <- PerformanceAnalytics::table.CalendarReturns(asset_daily_returns) 
+colnames(asset_port_monthly_returns) <- c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Year')
+
+asset_port_monthly_returns
+
+```
+
+
+### Standard Deviation
+
+```{r}
+
+pricing_url <- jsonlite::fromJSON('https://api.covalenthq.com/v1/pricing/historical/USD/btc/?quote-currency=USD&format=JSON&from=2015-01-01&to=2020-01-01&key=ckey_b4641130045946148e050fd4d29')
+
+prices_df <- pricing_url$data$prices$price
+prices_date_df <- pricing_url$data$prices$date 
+
+df <- data.frame(prices_df) 
+rownames(df) <- prices_date_df
+
+df <- as.xts(df)
+
+asset_daily_returns <- PerformanceAnalytics::CalculateReturns(df)
+asset_stddev <- PerformanceAnalytics::StdDev(asset_daily_returns) %>% scales::percent(accuracy = 0.01)
+
+# renderValueBox({
+  # Overall user count
+  valueBox(asset_stddev 
+           )
+# })
+```
+
+
+### Average Drawdown
+
+```{r}
+
+pricing_url <- jsonlite::fromJSON('https://api.covalenthq.com/v1/pricing/historical/USD/btc/?quote-currency=USD&format=JSON&from=2015-01-01&to=2020-01-01&key=ckey_b4641130045946148e050fd4d29')
+
+prices_df <- pricing_url$data$prices$price
+prices_date_df <- pricing_url$data$prices$date 
+
+df <- data.frame(prices_df) 
+rownames(df) <- prices_date_df
+
+df <- as.xts(df)
+
+asset_daily_returns <- PerformanceAnalytics::CalculateReturns(df)
+avg_asset_drawdown <- PerformanceAnalytics::AverageDrawdown(asset_daily_returns) %>% scales::percent(accuracy = 0.01)
+
+# renderValueBox({
+  # Overall user count
+  valueBox(avg_asset_drawdown, color = 'light-blue' 
+           )
+# })
+```
+
+
+### Annualized Return
+
+```{r}
+
+pricing_url <- jsonlite::fromJSON('https://api.covalenthq.com/v1/pricing/historical/USD/btc/?quote-currency=USD&format=JSON&from=2015-01-01&to=2020-01-01&key=ckey_b4641130045946148e050fd4d29')
+
+prices_df <- pricing_url$data$prices$price
+prices_date_df <- pricing_url$data$prices$date 
+
+df <- data.frame(prices_df) 
+rownames(df) <- prices_date_df
+
+df <- as.xts(df)
+
+asset_daily_returns <- PerformanceAnalytics::CalculateReturns(df)
+ann_ret <- PerformanceAnalytics::Return.annualized(asset_daily_returns) %>% scales::percent(accuracy = 0.01)
+# renderValueBox({
+  # Overall user count
+  valueBox(ann_ret 
+           )
+# })
+```
+
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Portfolio Allocations
+
+```{r}
+assets <- c('BTC', 'ETH', 'LINK', 'SUSHI')
+weightings <- c(0.5,0.25,0.15, 0.1) %>% scales::percent() 
+
+portfolio_merge <- cbind(assets, weightings)
+portfolio_merge <- data.frame(portfolio_merge)
+
+assetlbls <- paste(names(assets), "\n", assets, Asset="")
+
+p<-ggplot(data=portfolio_merge, aes(x=assets, y=weightings)) +
+  geom_bar(stat="identity", color = 'blue', fill = c("#ff8066", "#ff9466", "#ffa866", "#ffc966"))
+p
+```
+
+
+
+
+
+### Performance Histogram
+
+```{r}
+pricing_url <- jsonlite::fromJSON('https://api.covalenthq.com/v1/pricing/historical/USD/btc/?quote-currency=USD&format=JSON&from=2015-01-01&to=2020-01-01&key=ckey_b4641130045946148e050fd4d29')
+
+prices_df <- pricing_url$data$prices$price
+prices_date_df <- pricing_url$data$prices$date 
+
+asst_df <- data.frame('Performance Histogram' = prices_df)
+rownames(asst_df) <- prices_date_df
+
+asst_return <- PerformanceAnalytics::Return.calculate(asst_df)
+asst_hist <- PerformanceAnalytics::chart.Histogram(asst_return, colorset = c("#ff8a66"), border.col = 'black', lwd = 3)
+```
+
+
+{data-width=350} 
+-----------------------------------------------------------------------
+
+### Bitcoin Performance 
+
+```{r}
+pricing_url <- jsonlite::fromJSON('https://api.covalenthq.com/v1/pricing/historical/USD/btc/?quote-currency=USD&format=JSON&from=2015-01-01&to=2020-01-01&key=ckey_b4641130045946148e050fd4d29')
+
+prices_df <- pricing_url$data$prices$price
+prices_date_df <- pricing_url$data$prices$date 
+
+
+test_df <- data.frame(Date = prices_date_df, 
+                 Price = prices_df) 
+
+ggplot(test_df, aes(Date, Price, group = 1)) +
+  geom_line()
+
+
+# base plot
+# base_plot <- ggplot(data = test_df) +
+#   geom_line(aes(x = Date, y = Price, group = 1), 
+#             color = "#09557f",
+#             alpha = 0.6,
+#             size = 0.6) +
+#   labs(x = "Date", 
+#        y = "Asset Price",
+#        title = "Historical Asset Pricing") 
+```
+
+
