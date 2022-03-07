@@ -1,0 +1,14 @@
+name: trending_crypto_example
+title: trending_crypto_example
+username:
+account: josh-phillips33
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5793179
+bundleId: 5649870
+url: https://josh-phillips33.shinyapps.io/trending_crypto_example/
+when: 1646617134.40237
+lastSyncTime: 1646617134.40237
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: example_dashboard.Rmd
